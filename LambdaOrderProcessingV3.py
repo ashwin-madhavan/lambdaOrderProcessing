@@ -23,6 +23,7 @@ while True:
 # read in order and quotes file into data list
 
 # RENAME "orders.csv" and "quotes.csv" to your respective orders and quotes files
+# ordersDatafile = "C:/Users/ashwi/Desktop/orders.csv"
 ordersDatafile = "orders.csv"
 ordersData = list(csv.reader(open(ordersDatafile, encoding='utf-8')))
 
@@ -30,14 +31,20 @@ quotesDatafile = "quotes.csv"
 quotesData = list(csv.reader(open(quotesDatafile, encoding='utf-8')))
 
 # create xlsx writer
-workbook = xlsxwriter.Workbook("order+quotes_processed.xlsx")
+workbook = xlsxwriter.Workbook("order+quotes_processed2.xlsx")
 worksheet = workbook.add_worksheet()
 
 
 # functions
 def add_to_xlsx(list):
     for x in range(len(list)):
-        worksheet.write(chr(x + 65) + str(row_num_excel), list[x])
+        num = x + 65
+        if num < 91:
+            character = chr(num)
+            worksheet.write(character + str(row_num_excel), list[x])
+        else:
+            character = 'A' + chr(num - 26)
+            worksheet.write(character + str(row_num_excel), list[x])
 
 
 def find_index(headerStr, data):
@@ -99,40 +106,47 @@ def parseJSON(customerType, JSONString):
                     except:
                         numGPUs = 0
 
-                if customerType == 'EDU':
-                    if 'RTX 6000' in GPU.upper():
-                        GPUProductNumber = 'VCQ-RTX6000-EDU'
-                    elif 'RTX 8000' in GPU.upper():
-                        GPUProductNumber = 'VCQ-RTX8000-EDU'
-                    elif 'A100' in GPU.upper() and '80GB' in GPU.upper():
-                        GPUProductNumber = '935-23587-0000-200'
-                    elif 'A100' in GPU.upper() and '40GB' in GPU.upper():
-                        GPUProductNumber = '935-23587-0000-000'
-                    elif 'A100' in GPU.upper() and 'PCIE' in GPU.upper():
-                        GPUProductNumber = '900-21001-0000-000'
-                    elif 'RTX 5000' in GPU.upper():
-                        GPUProductNumber = 'VCQ-RTX5000-EDU'
-                    elif 'RTX A6000' in GPU.upper():
-                        GPUProductNumber = 'VCQ-RTX6000-EDU'
-                    elif 'V100' in GPU.upper():
-                        GPUProductNumber = '900-2G503-0010-000'
-                else:
-                    if 'RTX 6000' in GPU.upper():
-                        GPUProductNumber = 'VCQ-RTX6000-BLK'
-                    elif 'RTX 8000' in GPU.upper():
-                        GPUProductNumber = 'VCQ-RTX8000-BLK'
-                    elif 'A100' in GPU.upper() and '80GB' in GPU.upper():
-                        GPUProductNumber = '935-23587-0000-200'
-                    elif 'A100' in GPU.upper() and '40GB' in GPU.upper():
-                        GPUProductNumber = '935-23587-0000-000'
-                    elif 'A100' in GPU.upper() and 'PCIE' in GPU.upper():
-                        GPUProductNumber = '900-21001-0000-000'
-                    elif 'RTX 5000' in GPU.upper():
-                        GPUProductNumber = 'VCQ-RTX5000-BLK'
-                    elif 'RTX A6000' in GPU.upper():
-                        GPUProductNumber = 'VCQ-RTX6000-BLK'
-                    elif 'V100' in GPU.upper():
-                        GPUProductNumber = '900-2G503-0010-000'
+                GPUStrList = [
+                    ['RTX 6000*', 'VCQ-RTX6000-BLK', 'VCQ-RTX6000-EDU'],
+                    ['RTX A4000*', 'hold', 'hold'],
+                    ['RTX 8000', 'VCQ-RTX8000-BLK', 'VCQ-RTX8000-EDU'],
+                    ['A100 80 GB', '935-23587-0000-200', '935-23587-0000-200'],
+                    ['A100 40 GB', '935-23587-0000-200', '935-23587-0000-200'],
+                    ['A100 PCLE', '900-21001-0000-000', '900-21001-0000-000'],
+                    ['RTX 5000', 'VCQ-RTX5000-BLK', 'VCQ-RTX5000-EDU'],
+                    ['RTX A6000', 'VCQ-RTX6000-BLK', 'VCQ-RTX6000-EDU']
+                ]
+                for GPUInfo in GPUStrList:
+                    split = GPUInfo[0].split(" ")
+                    count = 0
+                    indexStr = 0
+                    for str in split:
+                        if '*' in str:
+                            gpuSplit = GPU.upper().split(" ")
+                            for gpuStr in gpuSplit:
+                                if str[0:len(str) - 1] == gpuStr:
+                                    count += 1
+                                    break
+
+                        if str.upper() in GPU.upper():
+                            count += 1
+                        else:
+                            check = False
+                            indexStr = GPUInfo
+                            break
+                    if count == len(split):
+                        indexStr = GPUStrList.index(GPUInfo)
+                        break
+                    else:
+                        indexStr = -1
+                try:
+                    if customerType == 'EDU':
+                        GPUProductNumber = GPUStrList[indexStr][2]
+                    else:
+                        GPUProductNumber = GPUStrList[indexStr][1]
+                except:
+                    GPUProductNumber = 'No GPU Product Number'
+                #############################
 
                 if 'THREADRIPPER' in processor.upper() and '3960X' in processor.upper():
                     CPUProductNumber = '100-000000010'
@@ -188,7 +202,7 @@ def salesMappingFxn(row, num):
 def dateFxn(row, num, firstBound, secondBound):
     try:
         string = row[num]
-        substring = string[firstBound:secondBound]
+        substring = string[firstBound:secondBound - 1]
         return substring
     except:
         return "N/A"
@@ -238,72 +252,61 @@ ordersItemsToAddTuples = [
 quotesItemsArray = numpy.asarray(quotesItemsToAddTuples)
 ordersItemsArray = numpy.asarray(ordersItemsToAddTuples)
 
-# For Quotes File
+# Parse Quotes and Orders Tuples
 quotesHead = []
-# quotesHead.append("Serial Number")
-for x in range(0, len(quotesItemsToAddTuples)):
-    quotesHead.append(quotesItemsArray[(x, 0)])
-
-
 quotesIndexNums = []
-for x in range(0, len(quotesItemsToAddTuples)):
-    quotesIndexNums.append(find_index(quotesItemsArray[x, 1], quotesData))
-
 quotesPerformActionOnItem = []
-for x in range(0, len(quotesItemsToAddTuples)):
-    quotesPerformActionOnItem.append(quotesItemsArray[x, 2])
-
 quotesItemDataType = []
 for x in range(0, len(quotesItemsToAddTuples)):
+    quotesHead.append(quotesItemsArray[(x, 0)])
+    quotesIndexNums.append(find_index(quotesItemsArray[x, 1], quotesData))
+    quotesPerformActionOnItem.append(quotesItemsArray[x, 2])
     quotesItemDataType.append(quotesItemsArray[x, 3])
 
-# For Orders File
 ordersHead = []
-ordersHead.append("Serial Number")
-for x in range(0, len(ordersItemsToAddTuples)):
-    ordersHead.append(ordersItemsArray[(x, 0)])
-
 ordersIndexNums = []
-for x in range(0, len(ordersItemsToAddTuples)):
-    ordersIndexNums.append(find_index(ordersItemsArray[x, 1], ordersData))
-
 ordersPerformActionOnItem = []
-for x in range(0, len(ordersItemsToAddTuples)):
-    ordersPerformActionOnItem.append(ordersItemsArray[x, 2])
-
 ordersItemDataType = []
 for x in range(0, len(ordersItemsToAddTuples)):
+    ordersHead.append(ordersItemsArray[(x, 0)])
+    ordersIndexNums.append(find_index(ordersItemsArray[x, 1], ordersData))
+    ordersPerformActionOnItem.append(ordersItemsArray[x, 2])
     ordersItemDataType.append(ordersItemsArray[x, 3])
 
-# add_to_xlsx(head)
-headers = quotesHead
-for x in ordersHead:
-    headers.append(x)
+# headers = quotesHead
+# headers.append("Unit Price")
+# for x in ordersHead:
+#     headers.append(x)
 
+headers = ["Quote ID", "Organization", "Quote Generation Date", "First Name", "Last Name", "Email", "Customer Type",
+           "Zip Code", "Country Code", "Sales Mapping", "Product", "Quantity", "Product Line", "Unit Price", "CPU",
+           "CPU Quantity", "GPU", "GPU Quantity", "Operating System", "GPU Product Number", "CPU Product Number",
+           "Total Price", "Orders ID", "Invoice ID", "Discount"]
 add_to_xlsx(headers)
 row_num_excel += 1
 
-
-quoteToBeMapped = []
 for x in range(1, len(quotesData)):
     row = quotesData[x]
     quoteToBeMapped = []
     for y in range(0, len(quotesPerformActionOnItem)):
-        if quotesPerformActionOnItem[y] == salesMappingFxn or quotesPerformActionOnItem[y] == raw or \
-                quotesPerformActionOnItem[
-                    y] == customerTypeFxn:
-            toAppend = quotesPerformActionOnItem[y](row, quotesIndexNums[y])
-        elif quotesPerformActionOnItem[y] == dateFxn:
-            toAppend = quotesPerformActionOnItem[y](row, quotesIndexNums[y], 0, 11)
-        else:
-            toAppend = quotesPerformActionOnItem[y](quoteToBeMapped[6], row[quotesIndexNums[y]])
+        try:
+            if quotesPerformActionOnItem[y] == salesMappingFxn or quotesPerformActionOnItem[y] == raw or \
+                    quotesPerformActionOnItem[y] == customerTypeFxn:
+                toAppend = quotesPerformActionOnItem[y](row, quotesIndexNums[y])
+            elif quotesPerformActionOnItem[y] == dateFxn:
+                toAppend = quotesPerformActionOnItem[y](row, quotesIndexNums[y], 0, 11)
+            else:
+                toAppend = quotesPerformActionOnItem[y](quoteToBeMapped[6], row[quotesIndexNums[y]])
 
-        if quotesItemDataType[y] == int:
-            try:
-                toAppend = int(toAppend)
-            except:
-                toAppend = ''
-        quoteToBeMapped.append(toAppend)
+            if quotesItemDataType[y] == int:
+                try:
+                    toAppend = int(toAppend)
+                except:
+                    toAppend = ''
+            quoteToBeMapped.append(toAppend)
+        except:
+            print(">>>ERROR with processing performed action: " + str(quotesPerformActionOnItem[y]) + " on Row: " + str(
+                x))
 
     quotes_mapping[quoteToBeMapped[0]] = quoteToBeMapped
 
@@ -328,27 +331,49 @@ for x in range(1, len(ordersData)):
 # Combining quotes.csv and orders.csv
 count = 0
 
-for x in quotes_mapping:
-    try:
-        quoteID = quotes_mapping[x][0]
-        temp = orders_mapping[quoteID]
-        quotes_mapping[x].append(temp[1])
-        quotes_mapping[x].append(temp[2])
-        quotes_mapping[x].append(temp[3])
-        quotes_mapping[x].append(temp[4])
-        quotes_mapping[x].append("true")
-
-        count += 1
-    except:
-        continue
+# for x in quotes_mapping:
+#     try:
+#         quoteID = quotes_mapping[x][0]
+#         temp = orders_mapping[quoteID]
+#         quotes_mapping[x].append(temp[1])
+#         quotes_mapping[x].append(temp[2])
+#         quotes_mapping[x].append(temp[3])
+#         quotes_mapping[x].append(temp[4])
+#         quotes_mapping[x].append("true")
+#
+#         count += 1
+#     except:
+#         continue
 
 # print("Total quotes matched to an order: " + count)
 
 for x in quotes_mapping:
-    temp = quotes_mapping[x]
-    temp[9] = str(temp[9])
-    add_to_xlsx(temp)
-    row_num_excel += 1
+    # try:
+    #     quoteID = quotes_mapping[x][0]
+    #     ordersArray = orders_mapping[quoteID]
+    #     ordersArray = ordersArray[1:len(ordersArray)]
+    # except:
+    #     continue
 
+    temp = quotes_mapping[x]
+    try:
+        if len(temp[9]) == 0:
+            temp[9] = str(temp[9])
+            temp[10] = temp[9]
+            temp[9] = ""
+            # try:
+            #     for order in ordersArray:
+            #         temp.append(order)
+            # except:
+            #     continue
+            add_to_xlsx(temp)
+            row_num_excel += 1
+        else:
+            for temp2 in temp[9]:
+                temp2 = temp[0:9] + temp[10:11] + temp2
+                add_to_xlsx(temp2)
+                row_num_excel += 1
+    except:
+        print("bean")
 workbook.close()
 print("finished!")
