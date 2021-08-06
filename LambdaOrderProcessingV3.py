@@ -114,7 +114,11 @@ def parseJSON(customerType, JSONString):
                     ['A100 40 GB', '935-23587-0000-200', '935-23587-0000-200'],
                     ['A100 PCLE', '900-21001-0000-000', '900-21001-0000-000'],
                     ['RTX 5000', 'VCQ-RTX5000-BLK', 'VCQ-RTX5000-EDU'],
-                    ['RTX A6000', 'VCQ-RTX6000-BLK', 'VCQ-RTX6000-EDU']
+                    ['RTX A6000*', 'VCQ-RTX6000-BLK', 'VCQ-RTX6000-EDU']
+                    # ['RTX 3090', 'hold3090', 'hold3090'],
+                    # ['RTX 3080', 'hold3080', 'hold3080'],
+                    # ['RTX 3070', 'hold3070', 'hold3070']
+
                 ]
                 for GPUInfo in GPUStrList:
                     split = GPUInfo[0].split(" ")
@@ -127,39 +131,70 @@ def parseJSON(customerType, JSONString):
                                 if str[0:len(str) - 1] == gpuStr:
                                     count += 1
                                     break
-
-                        if str.upper() in GPU.upper():
-                            count += 1
                         else:
-                            check = False
-                            indexStr = GPUInfo
-                            break
+                            if str.upper() in GPU.upper():
+                                count += 1
+                            else:
+                                check = False
+                                indexStr = GPUInfo
+                                break
                     if count == len(split):
                         indexStr = GPUStrList.index(GPUInfo)
                         break
                     else:
                         indexStr = -1
                 try:
-                    if customerType == 'EDU':
-                        GPUProductNumber = GPUStrList[indexStr][2]
+                    if indexStr == -1:
+                        GPUProductNumber = "None"
                     else:
-                        GPUProductNumber = GPUStrList[indexStr][1]
+                        if customerType == 'EDU':
+                            GPUProductNumber = GPUStrList[indexStr][2]
+                        else:
+                            GPUProductNumber = GPUStrList[indexStr][1]
                 except:
-                    GPUProductNumber = 'No GPU Product Number'
+                    GPUProductNumber = 'None'
                 #############################
 
-                if 'THREADRIPPER' in processor.upper() and '3960X' in processor.upper():
-                    CPUProductNumber = '100-000000010'
-                elif 'THREADRIPPER' in processor.upper() and '3990X' in processor.upper():
-                    CPUProductNumber = '100-000000163'
-                elif 'THREADRIPPER' in processor.upper() and 'PRO' in processor.upper() and '3995WX' in processor.upper():
-                    CPUProductNumber = '100-000000087'
-                elif 'THREADRIPPER' in processor.upper() and '3970X' in processor.upper():
-                    CPUProductNumber = '100-000000011'
-                elif 'THREADRIPPER' in processor.upper() and 'PRO' in processor.upper() and '3975WX' in processor.upper():
-                    CPUProductNumber = '100-000000086'
-                elif 'THREADRIPPER' in processor.upper() and 'PRO' in processor.upper() and '3955WX' in processor.upper():
-                    CPUProductNumber = '100-000000167'
+                CPUStrList = [
+                    ['THREADRIPPER 3960X', '100-000000010'],
+                    ['THREADRIPPER 3990X', '100-000000163'],
+                    ['THREADRIPPER PRO 3995WX', '100-000000087'],
+                    ['THREADRIPPER 3970X', '100-000000011'],
+                    ['THREADRIPPER PRO 3975WX', '100-000000086'],
+                    ['THREADRIPPER PRO 3955WX', '100-0000000167'],
+                ]
+
+                for CPUInfo in CPUStrList:
+                    split = CPUInfo[0].split(" ")
+                    count = 0
+                    indexStr = 0
+                    for str in split:
+                        if '*' in str:
+                            cpuSplit = processor.upper().split(" ")
+                            for cpuStr in cpuSplit:
+                                if str[0:len(str) - 1] == gpuStr:
+                                    count += 1
+                                    break
+
+                        if str.upper() in processor.upper():
+                            count += 1
+                        else:
+                            check = False
+                            indexStr = CPUInfo
+                            break
+                    if count == len(split):
+                        indexStr = CPUStrList.index(CPUInfo)
+                        break
+                    else:
+                        indexStr = -1
+                try:
+                    if indexStr == -1:
+                        CPUProductNumber = "None"
+                    else:
+                        CPUProductNumber = CPUStrList[indexStr][1]
+                except:
+                    CPUProductNumber = 'None'
+
 
             productList.append(processor)
             productList.append(numProcessors * item['quantity'])
@@ -281,7 +316,7 @@ for x in range(0, len(ordersItemsToAddTuples)):
 headers = ["Quote ID", "Organization", "Quote Generation Date", "First Name", "Last Name", "Email", "Customer Type",
            "Zip Code", "Country Code", "Sales Mapping", "Product", "Quantity", "Product Line", "Unit Price", "CPU",
            "CPU Quantity", "GPU", "GPU Quantity", "Operating System", "GPU Product Number", "CPU Product Number",
-           "Total Price", "Orders ID", "Invoice ID", "Discount"]
+           "Total Price", "Orders ID", "Invoice ID", "Discount", "Taxes"]
 add_to_xlsx(headers)
 row_num_excel += 1
 
@@ -349,9 +384,7 @@ count = 0
 
 for x in quotes_mapping:
     # try:
-    #     quoteID = quotes_mapping[x][0]
-    #     ordersArray = orders_mapping[quoteID]
-    #     ordersArray = ordersArray[1:len(ordersArray)]
+    #
     # except:
     #     continue
 
@@ -361,16 +394,36 @@ for x in quotes_mapping:
             temp[9] = str(temp[9])
             temp[10] = temp[9]
             temp[9] = ""
-            # try:
-            #     for order in ordersArray:
-            #         temp.append(order)
-            # except:
-            #     continue
+
+            try:
+                quoteID = quotes_mapping[x][0]
+                ordersArray = orders_mapping[quoteID]
+                ordersArray = ordersArray[1:len(ordersArray)]
+
+                for space in range(0, 11):
+                    temp.append("")
+                for order in ordersArray:
+                    temp.append(order)
+            except:
+                pause = 1
+
             add_to_xlsx(temp)
             row_num_excel += 1
         else:
             for temp2 in temp[9]:
                 temp2 = temp[0:9] + temp[10:11] + temp2
+
+                try:
+                    quoteID = quotes_mapping[x][0]
+                    ordersArray = orders_mapping[quoteID]
+                    ordersArray = ordersArray[1:len(ordersArray)]
+
+                    for order in ordersArray:
+                        temp2.append(order)
+                except:
+                    pause = 1
+
+
                 add_to_xlsx(temp2)
                 row_num_excel += 1
     except:
